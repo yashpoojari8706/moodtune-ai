@@ -9,7 +9,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "MoodTune AI - Voice-to-Vibe Music Companion",
+  title: "Moodly AI - Voice-to-Vibe Music Companion",
   description: "Transform your mood into music with AI-powered voice analysis and personalized playlists",
 };
 

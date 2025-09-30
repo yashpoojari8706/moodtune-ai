@@ -213,7 +213,7 @@ export default function PlaylistDisplay({
       <div className="p-4 bg-white/5 text-center">
         <p className="text-white/60 text-xs">
           Generated on {new Date(playlist.created_at).toLocaleDateString()} • 
-          Powered by MoodTune AI
+          Powered by Moodly AI
         </p>
       </div>
     </motion.div>

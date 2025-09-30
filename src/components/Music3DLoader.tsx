@@ -186,7 +186,7 @@ export default function Music3DLoader({ onComplete }: Music3DLoaderProps) {
                   backgroundClip: 'text',
                 }}
               >
-                MoodTune AI
+                Moodly AI
               </motion.h1>
               <motion.p 
                 className="text-xl text-white/90 font-light tracking-wide"

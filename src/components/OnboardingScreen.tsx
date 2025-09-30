@@ -189,7 +189,7 @@ function Scene() {
 // Onboarding Steps
 const onboardingSteps = [
   {
-    title: "Welcome to MoodTune AI",
+    title: "Welcome to Moodly AI",
     subtitle: "Your voice-powered music companion",
     description: "Discover music that matches your mood through the power of your voice"
   },

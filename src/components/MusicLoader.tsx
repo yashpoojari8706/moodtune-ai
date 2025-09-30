@@ -8,7 +8,7 @@ interface MusicLoaderProps {
 }
 
 export default function MusicLoader({
-  headline = "MoodTune AI is tuning your vibe...",
+  headline = "Moodly AI is tuning your vibe...",
   subcopy = "Analyzing your mood. Crafting a 5–track vibe set just for you.",
   stage = "analyzing"
 }: MusicLoaderProps) {

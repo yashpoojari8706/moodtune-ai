@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Startup script for MoodTune AI FastAPI backend
+Startup script for Moodly AI FastAPI backend
 """
 import uvicorn
 import sys
 import os
 
 if __name__ == "__main__":
-    print("🎵 Starting MoodTune AI Backend Server...")
+    print("🎵 Starting Moodly AI Backend Server...")
     print("📡 Server will be available at: http://localhost:8000")
     print("📚 API Documentation: http://localhost:8000/docs")
     print("🔄 Make sure your Next.js frontend is running on http://localhost:3000")
