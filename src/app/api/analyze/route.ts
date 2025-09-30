@@ -44,7 +44,9 @@ const analyzeAudioMood = async (audioBlob: string) => {
       ...moodMapping,
       confidence: Math.max(...Object.values(result.top_emotions).map(Number)) * 100,
       rawEmotions: result.top_emotions,
-      detectedEmotion: result.predicted_emotion
+      detectedEmotion: result.predicted_emotion,
+      neutralizingSongs: result.neutralizing_songs || [],
+      emotionExplanation: result.emotion_explanation || ''
     };
     
   } catch (error) {

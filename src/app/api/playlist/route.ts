@@ -1,6 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Track, Playlist } from '@/components/PlaylistDisplay';
 
+// FastAPI backend URL
+const FASTAPI_URL = 'http://localhost:8000';
+
+// Get songs from FastAPI backend using Gemini
+const getSongsFromBackend = async (emotion: string, maxResults: number = 5) => {
+  try {
+    const response = await fetch(`${FASTAPI_URL}/songs/${emotion}?max_results=${maxResults}`);
+    
+    if (!response.ok) {
+      throw new Error(`FastAPI error: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    return result.songs || [];
+  } catch (error) {
+    console.error('Error getting songs from FastAPI:', error);
+    return [];
+  }
+};
+
 // Mock music database - in a real app, you'd use Spotify API, Last.fm, etc.
 const mockTracks: Omit<Track, 'vibe_note' | 'mood_match'>[] = [
   {
@@ -166,7 +186,7 @@ const calculateMoodMatch = (track: any, mood: string, energy: number, valence: n
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { mood, energy = 50, valence = 50, intensity = 50, surprise = false } = body;
+    const { mood, energy = 50, valence = 50, intensity = 50, surprise = false, detectedEmotion } = body;
 
     if (!mood) {
       return NextResponse.json(
@@ -175,9 +195,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Select 5 random tracks (in a real app, you'd use sophisticated matching)
-    const shuffled = [...mockTracks].sort(() => 0.5 - Math.random());
-    const selectedTracks = shuffled.slice(0, 5);
+    let selectedTracks: Omit<Track, 'vibe_note' | 'mood_match'>[] = [];
+
+    // Try to get songs from FastAPI backend first
+    if (detectedEmotion) {
+      const backendSongs = await getSongsFromBackend(detectedEmotion, 5);
+      
+      if (backendSongs.length > 0) {
+        // Convert backend songs to our track format
+        selectedTracks = backendSongs.map((song: any, index: number) => ({
+          id: `backend_${index + 1}`,
+          title: song.song_name.split(' - ')[0] || song.song_name,
+          artist: song.song_name.split(' - ')[1] || 'Unknown Artist',
+          album: 'AI Recommended',
+          duration: '3:30', // Default duration
+          preview_url: undefined, // No preview for YouTube links
+          external_url: song.link
+        }));
+      }
+    }
+
+    // Fallback to mock tracks if backend fails or no songs returned
+    if (selectedTracks.length === 0) {
+      console.log('Using fallback mock tracks');
+      const shuffled = [...mockTracks].sort(() => 0.5 - Math.random());
+      selectedTracks = shuffled.slice(0, 5);
+    }
 
     // Generate vibe notes and mood matches for each track
     const tracksWithVibes: Track[] = selectedTracks.map(track => ({

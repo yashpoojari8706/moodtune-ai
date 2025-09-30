@@ -18,6 +18,9 @@ interface MoodAnalysis {
   valence: number;
   intensity: number;
   confidence: number;
+  detectedEmotion?: string;
+  neutralizingSongs?: Array<{song_name: string; link: string}>;
+  emotionExplanation?: string;
 }
 
 export default function MoodTuneApp() {
@@ -142,7 +145,8 @@ export default function MoodTuneApp() {
           mood: analysis.mood,
           energy: analysis.energy,
           valence: analysis.valence,
-          intensity: analysis.intensity
+          intensity: analysis.intensity,
+          detectedEmotion: analysis.detectedEmotion
         })
       });
 
@@ -174,6 +178,7 @@ export default function MoodTuneApp() {
           energy: moodAnalysis.energy,
           valence: moodAnalysis.valence,
           intensity: moodAnalysis.intensity,
+          detectedEmotion: moodAnalysis.detectedEmotion,
           surprise: true
         })
       });
