@@ -1,0 +1,484 @@
+"use client";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { MessageCircle, Mic, ArrowLeft } from "lucide-react";
+import MusicLoader from "./MusicLoader";
+import VoiceRecorder from "./VoiceRecorder";
+import PlaylistDisplay, { Playlist } from "./PlaylistDisplay";
+import OnboardingScreen from "./OnboardingScreen";
+import Music3DLoader from "./Music3DLoader";
+
+type AppState = "loader" | "onboarding" | "input" | "loading" | "playlist";
+type InputMode = "voice" | "text";
+
+interface MoodAnalysis {
+  mood: string;
+  energy: number;
+  valence: number;
+  intensity: number;
+  confidence: number;
+}
+
+export default function MoodTuneApp() {
+  const [appState, setAppState] = useState<AppState>("loader");
+  const [inputMode, setInputMode] = useState<InputMode>("voice");
+  const [loadingStage, setLoadingStage] = useState<"listening" | "analyzing" | "generating">("analyzing");
+  const [textInput, setTextInput] = useState("");
+  const [moodAnalysis, setMoodAnalysis] = useState<MoodAnalysis | null>(null);
+  const [playlist, setPlaylist] = useState<Playlist | null>(null);
+
+  const handleVoiceRecording = async (audioBlob: Blob) => {
+    setAppState("loading");
+    setLoadingStage("analyzing");
+
+    try {
+      // In a real app, you'd send the audio blob to your API
+      // For demo, we'll simulate the process
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      const response = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          text: "I'm feeling pretty energetic today and need some upbeat music to match my vibe!" 
+        })
+      });
+
+      const { analysis } = await response.json();
+      setMoodAnalysis(analysis);
+      
+      setLoadingStage("generating");
+      await generatePlaylist(analysis);
+      
+    } catch (error) {
+      console.error("Error processing voice:", error);
+      setAppState("input");
+    }
+  };
+
+  const handleTextSubmit = async () => {
+    if (!textInput.trim()) return;
+
+    setAppState("loading");
+    setLoadingStage("analyzing");
+
+    try {
+      const response = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: textInput })
+      });
+
+      const { analysis } = await response.json();
+      setMoodAnalysis(analysis);
+      
+      setLoadingStage("generating");
+      await generatePlaylist(analysis);
+      
+    } catch (error) {
+      console.error("Error processing text:", error);
+      setAppState("input");
+    }
+  };
+
+
+  const generatePlaylist = async (analysis: MoodAnalysis) => {
+    try {
+      const response = await fetch("/api/playlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mood: analysis.mood,
+          energy: analysis.energy,
+          valence: analysis.valence,
+          intensity: analysis.intensity
+        })
+      });
+
+      const { playlist: generatedPlaylist } = await response.json();
+      
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Show generating stage
+      
+      setPlaylist(generatedPlaylist);
+      setAppState("playlist");
+      
+    } catch (error) {
+      console.error("Error generating playlist:", error);
+      setAppState("input");
+    }
+  };
+
+  const handleSurpriseRemix = async () => {
+    if (!moodAnalysis) return;
+
+    setAppState("loading");
+    setLoadingStage("generating");
+
+    try {
+      const response = await fetch("/api/playlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mood: moodAnalysis.mood,
+          energy: moodAnalysis.energy,
+          valence: moodAnalysis.valence,
+          intensity: moodAnalysis.intensity,
+          surprise: true
+        })
+      });
+
+      const { playlist: surprisePlaylist } = await response.json();
+      
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      setPlaylist(surprisePlaylist);
+      setAppState("playlist");
+      
+    } catch (error) {
+      console.error("Error generating surprise remix:", error);
+      setAppState("playlist");
+    }
+  };
+
+  const handleShare = async (playlistToShare: Playlist) => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: playlistToShare.name,
+          text: `Check out my ${playlistToShare.mood_detected} mood playlist created by MoodTune AI!`,
+          url: window.location.href
+        });
+      } catch (error) {
+        console.log("Share cancelled");
+      }
+    } else {
+      // Fallback: copy to clipboard
+      const shareText = `🎵 ${playlistToShare.name}\n\n${playlistToShare.description}\n\nTracks:\n${playlistToShare.tracks.map((t, i) => `${i + 1}. ${t.title} - ${t.artist}`).join('\n')}\n\nGenerated by MoodTune AI`;
+      
+      try {
+        await navigator.clipboard.writeText(shareText);
+        alert("Playlist copied to clipboard!");
+      } catch (error) {
+        console.error("Failed to copy:", error);
+      }
+    }
+  };
+
+  const handleLoaderComplete = () => {
+    setAppState("onboarding");
+  };
+
+  const handleOnboardingComplete = () => {
+    setAppState("input");
+  };
+
+  const resetApp = () => {
+    setAppState("input");
+    setInputMode("voice");
+    setTextInput("");
+    setMoodAnalysis(null);
+    setPlaylist(null);
+  };
+
+  return (
+    <div className="min-h-screen bg-black">
+      <AnimatePresence mode="wait">
+        {appState === "loader" && (
+          <Music3DLoader key="loader" onComplete={handleLoaderComplete} />
+        )}
+
+        {appState === "onboarding" && (
+          <OnboardingScreen key="onboarding" onComplete={handleOnboardingComplete} />
+        )}
+
+        {appState === "loading" && (
+          <MusicLoader
+            key="loader"
+            headline="MoodTune AI is crafting your vibe..."
+            subcopy={
+              loadingStage === "listening" ? "Listening to your voice input..." :
+              loadingStage === "analyzing" ? "Analyzing your emotional state..." :
+              "Generating your personalized 5-track playlist..."
+            }
+            stage={loadingStage}
+          />
+        )}
+
+        {appState === "input" && (
+          <motion.div
+            key="input"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="container mx-auto px-4 py-8 min-h-screen flex flex-col justify-center relative overflow-hidden"
+          >
+            {/* Floating Music Notes Background */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+              {/* Musical Note 1 - Top Left */}
+              <motion.div
+                className="absolute text-white/50 text-3xl"
+                style={{ left: '8%', top: '12%' }}
+                animate={{
+                  y: [-15, -35, -15],
+                  x: [0, 12, 0],
+                  opacity: [0.3, 0.7, 0.3],
+                  rotate: [0, 8, 0],
+                }}
+                transition={{
+                  duration: 8,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+              >
+                ♪
+              </motion.div>
+
+              {/* Musical Note 2 - Top Right */}
+              <motion.div
+                className="absolute text-white/40 text-2xl"
+                style={{ right: '10%', top: '8%' }}
+                animate={{
+                  y: [-20, -40, -20],
+                  x: [0, -10, 0],
+                  opacity: [0.25, 0.6, 0.25],
+                  rotate: [0, -5, 0],
+                }}
+                transition={{
+                  duration: 7,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  delay: 1.5,
+                }}
+              >
+                ♫
+              </motion.div>
+
+              {/* Musical Note 3 - Middle Left */}
+              <motion.div
+                className="absolute text-white/35 text-xl"
+                style={{ left: '3%', top: '45%' }}
+                animate={{
+                  y: [-12, -28, -12],
+                  x: [0, 15, 0],
+                  opacity: [0.2, 0.5, 0.2],
+                  rotate: [0, 10, 0],
+                }}
+                transition={{
+                  duration: 9,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  delay: 3,
+                }}
+              >
+                ♬
+              </motion.div>
+
+              {/* Musical Note 4 - Middle Right */}
+              <motion.div
+                className="absolute text-white/45 text-2xl"
+                style={{ right: '6%', top: '35%' }}
+                animate={{
+                  y: [-18, -38, -18],
+                  x: [0, -8, 0],
+                  opacity: [0.3, 0.65, 0.3],
+                  rotate: [0, -7, 0],
+                }}
+                transition={{
+                  duration: 6.5,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  delay: 4.5,
+                }}
+              >
+                ♩
+              </motion.div>
+
+              {/* Musical Note 5 - Bottom Left */}
+              <motion.div
+                className="absolute text-white/40 text-xl"
+                style={{ left: '12%', bottom: '15%' }}
+                animate={{
+                  y: [0, -20, 0],
+                  x: [0, 10, 0],
+                  opacity: [0.25, 0.55, 0.25],
+                  rotate: [0, 6, 0],
+                }}
+                transition={{
+                  duration: 7.5,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  delay: 2,
+                }}
+              >
+                ♪
+              </motion.div>
+
+              {/* Musical Note 6 - Bottom Right */}
+              <motion.div
+                className="absolute text-white/35 text-lg"
+                style={{ right: '15%', bottom: '20%' }}
+                animate={{
+                  y: [-8, -25, -8],
+                  x: [0, -12, 0],
+                  opacity: [0.2, 0.5, 0.2],
+                  rotate: [0, -4, 0],
+                }}
+                transition={{
+                  duration: 8.5,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  delay: 6,
+                }}
+              >
+                ♫
+              </motion.div>
+
+              {/* Musical Note 7 - Center Top */}
+              <motion.div
+                className="absolute text-white/30 text-lg"
+                style={{ left: '45%', top: '5%' }}
+                animate={{
+                  y: [-10, -25, -10],
+                  x: [0, 5, 0],
+                  opacity: [0.15, 0.45, 0.15],
+                  rotate: [0, 3, 0],
+                }}
+                transition={{
+                  duration: 10,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  delay: 7,
+                }}
+              >
+                ♬
+              </motion.div>
+
+              {/* Musical Note 8 - Center Bottom */}
+              <motion.div
+                className="absolute text-white/25 text-base"
+                style={{ left: '55%', bottom: '8%' }}
+                animate={{
+                  y: [0, -15, 0],
+                  x: [0, -6, 0],
+                  opacity: [0.1, 0.4, 0.1],
+                  rotate: [0, -2, 0],
+                }}
+                transition={{
+                  duration: 11,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  delay: 8.5,
+                }}
+              >
+                ♩
+              </motion.div>
+            </div>
+            {/* Header */}
+            <div className="text-center mb-12">
+              <h1 className="text-4xl md:text-6xl font-bold text-white mb-4">
+                MoodTune AI
+              </h1>
+              <p className="text-xl text-white/90 mb-2">
+                Voice-to-Vibe Emotional Music Companion
+              </p>
+              <p className="text-white/70 max-w-2xl mx-auto">
+                Share your mood through voice or text and get an instant 5-track playlist 
+                with AI-powered vibe notes that match your emotional state perfectly.
+              </p>
+            </div>
+
+            {/* Input Mode Selector */}
+            <div className="flex justify-center mb-12">
+              <div className="flex bg-white/5 rounded-2xl p-2 backdrop-blur-sm border border-white/10">
+                <button
+                  onClick={() => setInputMode("voice")}
+                  className={`flex items-center space-x-3 px-8 py-4 rounded-xl transition-all duration-300 ${
+                    inputMode === "voice" 
+                      ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/25" 
+                      : "text-white/70 hover:text-white hover:bg-white/10"
+                  }`}
+                >
+                  <Mic className="w-5 h-5" />
+                  <span className="font-medium">Voice</span>
+                </button>
+                <button
+                  onClick={() => setInputMode("text")}
+                  className={`flex items-center space-x-3 px-8 py-4 rounded-xl transition-all duration-300 ${
+                    inputMode === "text" 
+                      ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/25" 
+                      : "text-white/70 hover:text-white hover:bg-white/10"
+                  }`}
+                >
+                  <MessageCircle className="w-5 h-5" />
+                  <span className="font-medium">Text</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Input Content */}
+            <div className="max-w-lg mx-auto">
+              {inputMode === "voice" && (
+                <VoiceRecorder onRecordingComplete={handleVoiceRecording} />
+              )}
+
+              {inputMode === "text" && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5 }}
+                  className="space-y-6"
+                >
+                  <div className="relative">
+                    <textarea
+                      value={textInput}
+                      onChange={(e) => setTextInput(e.target.value)}
+                      placeholder="Tell me how you're feeling... What's your vibe right now?"
+                      className="w-full h-40 p-6 bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl text-white placeholder-white/50 resize-none focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all duration-300"
+                      rows={4}
+                    />
+                  </div>
+                  
+                  <motion.button
+                    onClick={handleTextSubmit}
+                    disabled={!textInput.trim()}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-white/10 disabled:to-white/10 disabled:cursor-not-allowed text-white font-semibold rounded-2xl transition-all duration-300 shadow-lg shadow-purple-500/25 disabled:shadow-none"
+                  >
+                    {textInput.trim() ? " Analyze My Vibe" : "Share Your Mood First"}
+                  </motion.button>
+                </motion.div>
+              )}
+
+            </div>
+          </motion.div>
+        )}
+
+        {appState === "playlist" && playlist && (
+          <motion.div
+            key="playlist"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="container mx-auto px-4 py-8 min-h-screen"
+          >
+            {/* Back Button */}
+            <button
+              onClick={resetApp}
+              className="flex items-center space-x-2 mb-6 text-white/80 hover:text-white transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Create New Playlist</span>
+            </button>
+
+            <PlaylistDisplay
+              playlist={playlist}
+              onShare={handleShare}
+              onSurpriseRemix={handleSurpriseRemix}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
