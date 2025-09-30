@@ -205,8 +205,8 @@ export async function POST(request: NextRequest) {
         // Convert backend songs to our track format
         selectedTracks = backendSongs.map((song: any, index: number) => ({
           id: `backend_${index + 1}`,
-          title: song.song_name.split(' - ')[0] || song.song_name,
-          artist: song.song_name.split(' - ')[1] || 'Unknown Artist',
+          title: song.song_title || song.song_name.split(' - ')[0] || song.song_name,
+          artist: song.artist || song.song_name.split(' - ')[1] || 'Unknown Artist',
           album: 'AI Recommended',
           duration: '3:30', // Default duration
           preview_url: undefined, // No preview for YouTube links

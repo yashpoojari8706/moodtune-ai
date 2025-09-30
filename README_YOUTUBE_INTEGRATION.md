@@ -1,7 +1,7 @@
-# MoodTune AI - YouTube Integration
+# MoodTune AI - Gemini AI Integration with API Key Rotation
 
 ## 🎵 Overview
-The MoodTune AI backend now includes YouTube integration to provide song recommendations that help neutralize detected emotions. When an emotion is detected from speech, the system automatically suggests appropriate music to help balance your emotional state.
+The MoodTune AI backend now includes **Gemini AI integration** with **automatic API key rotation** to provide dynamic song recommendations that help neutralize detected emotions. When an emotion is detected from speech, the system automatically suggests appropriate music with **real YouTube links** to help balance your emotional state.
 
 ## 🔧 New Features
 
@@ -53,11 +53,22 @@ GET /songs/sad?max_results=5
 pip install -r requirements.txt
 ```
 
-### 2. API Key Configuration
-The YouTube API key is already configured in `config.py`:
+### 2. API Key Rotation System
+Multiple Gemini API keys with automatic rotation when one gets exhausted:
 ```python
-YOUTUBE_API_KEY = "AIzaSyAVJAzwPWBAA6OUg9eR6kSav9YYyrPwijc"
+GEMINI_API_KEYS = [
+    "AIzaSyBs9oh6pxzBjUaNDG9g7i52hS_jQdf-c-g",
+    "AIzaSyAA7jV48e0Tv7_wY7nwskqQwdD-Nzjj1K0", 
+    "AIzaSyC0LF4LsYvc5bHzT4rKnS3RfhnPeXG0JOM",
+    "AIzaSyBDZQ-7JZiNkwgyRYrZJL4bfiYhAhLOAC8"
+]
 ```
+
+### 3. Enhanced Song Display
+- **Separate artist and song title fields**
+- **Clickable YouTube links** that open videos directly
+- **Real-time song generation** by Gemini AI
+- **Fallback system** with curated songs if API fails
 
 ### 3. Start the Backend
 ```bash
@@ -67,13 +78,15 @@ python start_backend.py
 ### 4. Test the Integration
 ```bash
 python test_api.py
+python test_api_rotation.py  # Test API key rotation
 ```
 
 ## 📁 New Files Added
 
-- `config.py` - Configuration including API key and emotion mapping
-- `youtube_service.py` - YouTube API integration service
-- `test_api.py` - Test script for the new functionality
+- `config.py` - Configuration with multiple API keys and emotion mapping
+- `youtube_service.py` - Gemini AI service with API key rotation
+- `test_api.py` - Basic API functionality test
+- `test_api_rotation.py` - API key rotation and song display test
 - `README_YOUTUBE_INTEGRATION.md` - This documentation
 
 ## 🎯 Usage Examples

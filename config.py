@@ -1,6 +1,14 @@
 # Configuration file for MoodTune AI
-# Google Gemini API Key (same key works for both YouTube and Gemini)
-GEMINI_API_KEY = "AIzaSyBDZQ-7JZiNkwgyRYrZJL4bfiYhAhLOAC8"
+# Multiple Google Gemini API Keys with automatic rotation
+GEMINI_API_KEYS = [
+    "AIzaSyBs9oh6pxzBjUaNDG9g7i52hS_jQdf-c-g",
+    "AIzaSyAA7jV48e0Tv7_wY7nwskqQwdD-Nzjj1K0", 
+    "AIzaSyC0LF4LsYvc5bHzT4rKnS3RfhnPeXG0JOM",
+    "AIzaSyBDZQ-7JZiNkwgyRYrZJL4bfiYhAhLOAC8"  # Backup key
+]
+
+# Current API key index for rotation
+CURRENT_API_KEY_INDEX = 0
 
 # Emotion to neutralizing music prompts
 EMOTION_NEUTRALIZATION_PROMPTS = {
