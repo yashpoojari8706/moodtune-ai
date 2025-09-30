@@ -29,13 +29,13 @@ export default function MusicLoader({
 
   return (
     <div
-      className="relative flex min-h-[70vh] flex-col items-center justify-center overflow-hidden bg-black"
+      className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden"
     >
       <div 
-        className="absolute inset-0 opacity-15 pointer-events-none"
+        className="absolute inset-0 opacity-10 pointer-events-none"
         style={{
           backgroundImage:
-            "repeating-linear-gradient(90deg, rgba(255,255,255,.06) 0px, rgba(255,255,255,.06) 1px, transparent 1px, transparent 8px)",
+            "repeating-linear-gradient(90deg, rgba(255,255,255,.03) 0px, rgba(255,255,255,.03) 1px, transparent 1px, transparent 12px)",
         }}
       />
       
@@ -70,10 +70,6 @@ export default function MusicLoader({
         </div>
 
         <div className="mb-4 text-lg font-medium text-white/95">
-          {getStageText()}
-        </div>
-
-        <div className="text-white/90 text-sm md:text-base mb-3">
           {subcopy}
         </div>
 

@@ -27,6 +27,49 @@ function MusicNote({ position, scale = 1 }: { position: [number, number, number]
   );
 }
 
+// Background Music Notes (replacing stars)
+function BackgroundMusicNotes() {
+  const notesRef = useRef<THREE.Group>(null);
+  const notePositions = [];
+  const noteSymbols = ['♪', '♫', '♬', '♩'];
+  
+  // Generate random positions for music notes
+  for (let i = 0; i < 30; i++) {
+    notePositions.push([
+      (Math.random() - 0.5) * 25,
+      (Math.random() - 0.5) * 25,
+      (Math.random() - 0.5) * 25
+    ]);
+  }
+
+  useFrame((state) => {
+    if (notesRef.current) {
+      notesRef.current.rotation.y += 0.0005;
+      notesRef.current.rotation.x += 0.0002;
+    }
+  });
+
+  return (
+    <group ref={notesRef}>
+      {notePositions.map((position, index) => (
+        <Float key={index} speed={0.5 + Math.random() * 0.5} rotationIntensity={0.2} floatIntensity={0.3}>
+          <Text
+            position={position as [number, number, number]}
+            fontSize={1.2 + Math.random() * 0.8}
+            color={['#8b5cf6', '#ec4899', '#6366f1', '#a855f7'][Math.floor(Math.random() * 4)]}
+            anchorX="center"
+            anchorY="middle"
+            outlineWidth={0.02}
+            outlineColor="#ffffff"
+          >
+            {noteSymbols[Math.floor(Math.random() * noteSymbols.length)]}
+          </Text>
+        </Float>
+      ))}
+    </group>
+  );
+}
+
 // Sound Wave Rings
 function SoundWave({ radius = 1, color = "#8b5cf6" }: { radius?: number; color?: string }) {
   const ringRef = useRef<THREE.Mesh>(null);
