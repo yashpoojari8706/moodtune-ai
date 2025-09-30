@@ -1,5 +1,59 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// FastAPI backend URL - adjust port if needed
+const FASTAPI_URL = 'http://localhost:8000';
+
+// Analyze audio using FastAPI backend
+const analyzeAudioMood = async (audioBlob: string) => {
+  try {
+    // Convert base64 to blob
+    const response = await fetch(audioBlob);
+    const blob = await response.blob();
+    
+    // Create FormData for FastAPI
+    const formData = new FormData();
+    formData.append('audio_file', blob, 'audio.wav');
+    
+    // Send to FastAPI backend
+    const apiResponse = await fetch(`${FASTAPI_URL}/predict/`, {
+      method: 'POST',
+      body: formData,
+    });
+    
+    if (!apiResponse.ok) {
+      throw new Error(`FastAPI error: ${apiResponse.status}`);
+    }
+    
+    const result = await apiResponse.json();
+    
+    // Map FastAPI emotions to our mood system
+    const emotionToMood = {
+      'happy': { mood: 'euphoric', energy: 85, valence: 90, intensity: 70 },
+      'sad': { mood: 'melancholic', energy: 25, valence: 20, intensity: 60 },
+      'angry': { mood: 'angry', energy: 80, valence: 15, intensity: 95 },
+      'fear': { mood: 'anxious', energy: 70, valence: 25, intensity: 85 },
+      'surprise': { mood: 'excited', energy: 75, valence: 70, intensity: 80 },
+      'disgust': { mood: 'frustrated', energy: 40, valence: 30, intensity: 70 },
+      'neutral': { mood: 'contemplative', energy: 50, valence: 50, intensity: 40 }
+    };
+    
+    const primaryEmotion = result.predicted_emotion.toLowerCase();
+    const moodMapping = emotionToMood[primaryEmotion as keyof typeof emotionToMood] || emotionToMood['neutral'];
+    
+    return {
+      ...moodMapping,
+      confidence: Math.max(...Object.values(result.top_emotions).map(Number)) * 100,
+      rawEmotions: result.top_emotions,
+      detectedEmotion: result.predicted_emotion
+    };
+    
+  } catch (error) {
+    console.error('Error calling FastAPI:', error);
+    // Fallback to text analysis
+    throw error;
+  }
+};
+
 // Mock mood analysis - in a real app, you'd use AI services like OpenAI, Hugging Face, etc.
 const analyzeMood = async (text: string) => {
   // Simple keyword-based mood detection for demo
@@ -66,24 +120,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // For demo purposes, we'll use text analysis
-    // In a real app, you'd transcribe audio first using services like:
-    // - OpenAI Whisper API
-    // - Google Speech-to-Text
-    // - Azure Speech Services
-    
-    let analysisText = text;
-    if (!analysisText && audioBlob) {
-      // Mock transcription for demo
-      analysisText = "I'm feeling pretty good today, just need some music to match my vibe";
-    }
+    let moodAnalysis;
+    let transcription = text;
 
-    const moodAnalysis = await analyzeMood(analysisText);
+    // If audio is provided, use FastAPI backend for emotion recognition
+    if (audioBlob) {
+      try {
+        moodAnalysis = await analyzeAudioMood(audioBlob);
+        transcription = `Audio analysis detected: ${moodAnalysis.detectedEmotion}`;
+      } catch (error) {
+        console.error("FastAPI analysis failed, falling back to text analysis:", error);
+        // Fallback to text analysis if FastAPI fails
+        const fallbackText = text || "I'm sharing my mood through voice";
+        moodAnalysis = await analyzeMood(fallbackText);
+        transcription = fallbackText;
+      }
+    } else {
+      // Use text-based analysis
+      moodAnalysis = await analyzeMood(text);
+    }
 
     return NextResponse.json({
       success: true,
       analysis: moodAnalysis,
-      transcription: analysisText
+      transcription: transcription,
+      source: audioBlob ? 'audio' : 'text'
     });
 
   } catch (error) {

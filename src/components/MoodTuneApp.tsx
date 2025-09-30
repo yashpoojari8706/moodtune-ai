@@ -1,15 +1,16 @@
 "use client";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, Mic, ArrowLeft } from "lucide-react";
+import { MessageCircle, Mic, ArrowLeft, Upload } from "lucide-react";
 import MusicLoader from "./MusicLoader";
 import VoiceRecorder from "./VoiceRecorder";
 import PlaylistDisplay, { Playlist } from "./PlaylistDisplay";
 import OnboardingScreen from "./OnboardingScreen";
 import Music3DLoader from "./Music3DLoader";
+import FileUpload from "./FileUpload";
 
 type AppState = "loader" | "onboarding" | "input" | "loading" | "playlist";
-type InputMode = "voice" | "text";
+type InputMode = "voice" | "text" | "file";
 
 interface MoodAnalysis {
   mood: string;
@@ -26,23 +27,33 @@ export default function MoodTuneApp() {
   const [textInput, setTextInput] = useState("");
   const [moodAnalysis, setMoodAnalysis] = useState<MoodAnalysis | null>(null);
   const [playlist, setPlaylist] = useState<Playlist | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const handleVoiceRecording = async (audioBlob: Blob) => {
     setAppState("loading");
     setLoadingStage("analyzing");
 
     try {
-      // In a real app, you'd send the audio blob to your API
-      // For demo, we'll simulate the process
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Convert blob to base64 for sending to API
+      const reader = new FileReader();
+      reader.readAsDataURL(audioBlob);
+      
+      const audioData = await new Promise<string>((resolve) => {
+        reader.onloadend = () => resolve(reader.result as string);
+      });
       
       const response = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          text: "I'm feeling pretty energetic today and need some upbeat music to match my vibe!" 
+          audioBlob: audioData,
+          text: null
         })
       });
+
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status}`);
+      }
 
       const { analysis } = await response.json();
       setMoodAnalysis(analysis);
@@ -53,6 +64,46 @@ export default function MoodTuneApp() {
     } catch (error) {
       console.error("Error processing voice:", error);
       setAppState("input");
+    }
+  };
+
+  const handleFileUpload = async (file: File) => {
+    setIsProcessing(true);
+    setAppState("loading");
+    setLoadingStage("analyzing");
+
+    try {
+      // Convert file to base64
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      
+      const audioData = await new Promise<string>((resolve) => {
+        reader.onloadend = () => resolve(reader.result as string);
+      });
+      
+      const response = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          audioBlob: audioData,
+          text: null
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status}`);
+      }
+
+      const { analysis } = await response.json();
+      setMoodAnalysis(analysis);
+      
+      setLoadingStage("generating");
+      await generatePlaylist(analysis);
+      
+    } catch (error) {
+      console.error("Error processing file:", error);
+      setAppState("input");
+      setIsProcessing(false);
     }
   };
 
@@ -692,8 +743,8 @@ export default function MoodTuneApp() {
                   <motion.div
                     className={`absolute top-3 h-14 bg-gradient-to-r ${theme.primary} rounded-2xl shadow-lg`}
                     animate={{
-                      x: inputMode === "voice" ? 0 : "100%",
-                      width: inputMode === "voice" ? "calc(50% - 6px)" : "calc(50% - 6px)",
+                      x: inputMode === "voice" ? 0 : inputMode === "text" ? "calc(33.33% + 2px)" : "calc(66.66% + 4px)",
+                      width: "calc(33.33% - 6px)",
                     }}
                     transition={{ type: "spring", stiffness: 300, damping: 30 }}
                   />
@@ -702,7 +753,7 @@ export default function MoodTuneApp() {
                     onClick={() => setInputMode("voice")}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    className={`relative flex items-center space-x-3 px-8 py-4 rounded-2xl transition-all duration-300 z-10 ${
+                    className={`relative flex items-center space-x-2 px-4 py-4 rounded-2xl transition-all duration-300 z-10 ${
                       inputMode === "voice" 
                         ? "text-white" 
                         : "text-white/70 hover:text-white"
@@ -712,16 +763,16 @@ export default function MoodTuneApp() {
                       animate={{ rotate: inputMode === "voice" ? [0, 5, -5, 0] : 0 }}
                       transition={{ duration: 0.5 }}
                     >
-                      <Mic className="w-5 h-5" />
+                      <Mic className="w-4 h-4" />
                     </motion.div>
-                    <span className="font-semibold text-sm md:text-base">Voice</span>
+                    <span className="font-semibold text-xs md:text-sm">Voice</span>
                   </motion.button>
                   
                   <motion.button
                     onClick={() => setInputMode("text")}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    className={`relative flex items-center space-x-3 px-8 py-4 rounded-2xl transition-all duration-300 z-10 ${
+                    className={`relative flex items-center space-x-2 px-4 py-4 rounded-2xl transition-all duration-300 z-10 ${
                       inputMode === "text" 
                         ? "text-white" 
                         : "text-white/70 hover:text-white"
@@ -731,9 +782,28 @@ export default function MoodTuneApp() {
                       animate={{ rotate: inputMode === "text" ? [0, 5, -5, 0] : 0 }}
                       transition={{ duration: 0.5 }}
                     >
-                      <MessageCircle className="w-5 h-5" />
+                      <MessageCircle className="w-4 h-4" />
                     </motion.div>
-                    <span className="font-semibold text-sm md:text-base">Text</span>
+                    <span className="font-semibold text-xs md:text-sm">Text</span>
+                  </motion.button>
+
+                  <motion.button
+                    onClick={() => setInputMode("file")}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className={`relative flex items-center space-x-2 px-4 py-4 rounded-2xl transition-all duration-300 z-10 ${
+                      inputMode === "file" 
+                        ? "text-white" 
+                        : "text-white/70 hover:text-white"
+                    }`}
+                  >
+                    <motion.div
+                      animate={{ rotate: inputMode === "file" ? [0, 5, -5, 0] : 0 }}
+                      transition={{ duration: 0.5 }}
+                    >
+                      <Upload className="w-4 h-4" />
+                    </motion.div>
+                    <span className="font-semibold text-xs md:text-sm">Upload</span>
                   </motion.button>
                 </div>
 
@@ -890,6 +960,25 @@ export default function MoodTuneApp() {
                       )}
                     </motion.button>
                   </div>
+                </motion.div>
+              )}
+
+              {inputMode === "file" && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.5 }}
+                  className="relative"
+                >
+                  {/* File Upload Component */}
+                  <FileUpload 
+                    onFileSelect={handleFileUpload}
+                    isProcessing={isProcessing}
+                  />
+
+                  {/* Glow effect */}
+                  <div className={`absolute inset-0 bg-gradient-to-r ${theme.primary} rounded-3xl blur-2xl opacity-10 -z-10`} />
                 </motion.div>
               )}
 
